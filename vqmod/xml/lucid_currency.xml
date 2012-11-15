@@ -1,0 +1,302 @@
+<!-- Created using vQmod XML Generator by UKSB - http://www.opencart-extensions.co.uk //-->
+<modification>
+	<id><![CDATA[LucidCurrency]]></id>
+	<version><![CDATA[1.0.1]]></version>
+	<vqmver><![CDATA[1.0.1]]></vqmver>
+	<author><![CDATA[gareth@lucidlogic.co.za]]></author>
+
+	<file name="admin/controller/common/home.php">
+		<operation>
+			<search position="after"><![CDATA[public function index() {]]></search>
+			<add><![CDATA[
+				$this->load->model('setting/lucid_currency');
+
+				$this->model_setting_lucid_currency->checkLucidCurrency();
+			]]></add>
+		</operation>	
+	</file>
+
+	<file name="admin/controller/catalog/product.php">
+		<operation>
+			<search position="after"><![CDATA[$this->data['entry_price'] = $this->language->get('entry_price');]]></search>
+			<add><![CDATA[$this->data['entry_prices'] = $this->language->get('entry_prices');]]></add>
+		</operation>
+
+		<operation>
+			<search position="before"><![CDATA[if (isset($this->request->post['price'])) {]]></search>
+			<add><![CDATA[
+
+				$this->data['product_prices']= array();
+
+				if (!empty($this->request->post['prices'])) {
+					$this->load->model('setting/lucid_currency');
+					$currencies = $this->model_setting_lucid_currency->getSetting();
+					foreach ($currencies as $currency) {
+						$currency_id = $currency['currency_id'];
+						$this->data['product_prices'][] = array(
+							'currency_id'	=> $currency_id,
+							'title'			=> $currency['title'],
+							'price' 		=> $this->request->post['prices'][$currency_id]
+						);						
+					}					
+				} else {
+					if (!empty($this->request->get['product_id'])) {
+						$this->load->model('setting/lucid_currency');
+						$currencies = $this->model_setting_lucid_currency->getSetting();
+						foreach ($currencies as $currency) {
+							$currency_id = $currency['currency_id'];
+							$product_price = $this->model_catalog_product->getProductPrice($this->request->get['product_id'], $currency_id);
+							$this->data['product_prices'][] = array(
+								'currency_id'	=> $currency_id,
+								'title'			=> $currency['title'],
+								'price' 		=> $product_price
+							);						
+						}
+					} else {
+						$this->load->model('setting/lucid_currency');
+						$currencies = $this->model_setting_lucid_currency->getSetting();
+						foreach ($currencies as $currency) {
+							$currency_id = $currency['currency_id'];
+							$this->data['product_prices'][] = array(
+								'currency_id'	=> $currency_id,
+								'title'			=> $currency['title'],
+								'price' 		=> ''
+							);						
+						}
+					}
+				}
+
+			]]></add>
+		</operation>	
+	</file>
+
+	<file name="admin/model/catalog/product.php">
+		<operation>
+			<search position="before" index="1"><![CDATA[if (isset($data['image'])) {]]></search>
+			<add><![CDATA[
+				if (!empty($data['prices'])) {
+					$this->db->query("DELETE FROM " . DB_PREFIX . "product_price WHERE product_id = '" . (int)$product_id . "'");
+					foreach ($data['prices'] as $currency_id => $product_price) {
+						$this->db->query("INSERT INTO " . DB_PREFIX . "product_price SET product_id = '" . (int)$product_id . "', currency_id = '" . (int)$currency_id . "', price = '" . (float)$product_price . "'");
+					}
+
+					$query = $this->db->query("SELECT * FROM " . DB_PREFIX . "currency_order ORDER BY sort_order ASC, currency_id ASC");
+
+					if (!empty($query->rows)) {
+						foreach ($query->rows as $currency) {
+							$currency_id = $currency['currency_id'];
+							if (!empty($data['prices'][$currency_id]) && $data['prices'][$currency_id] > 0) {
+								$result = $this->db->query("SELECT * FROM " . DB_PREFIX . "currency WHERE currency_id = '" . (int)$currency_id . "'");
+								if (!empty($result->row['value'])) {
+									$this->db->query("UPDATE " . DB_PREFIX . "product SET price = '" . (float)$data['price'] . "' WHERE product_id = '" . (int)$product_id . "'");
+								}
+								break;
+							} 
+						}
+					}					
+				}
+			]]></add>
+		</operation>
+
+		<operation>
+			<search position="before" index="2"><![CDATA[if (isset($data['image'])) {]]></search>
+			<add><![CDATA[
+				if (!empty($data['prices'])) {
+					$this->db->query("DELETE FROM " . DB_PREFIX . "product_price WHERE product_id = '" . (int)$product_id . "'");
+					foreach ($data['prices'] as $currency_id => $product_price) {
+						$this->db->query("INSERT INTO " . DB_PREFIX . "product_price SET product_id = '" . (int)$product_id . "', currency_id = '" . (int)$currency_id . "', price = '" . (float)$product_price . "'");
+					}
+
+					$query = $this->db->query("SELECT * FROM " . DB_PREFIX . "currency_order ORDER BY sort_order ASC, currency_id ASC");
+
+					if (!empty($query->rows)) {
+						foreach ($query->rows as $currency) {
+							$currency_id = $currency['currency_id'];
+							if (!empty($data['prices'][$currency_id]) && $data['prices'][$currency_id] > 0) {
+								$result = $this->db->query("SELECT * FROM " . DB_PREFIX . "currency WHERE currency_id = '" . (int)$currency_id . "'");
+								if (!empty($result->row['value'])) {
+									$this->db->query("UPDATE " . DB_PREFIX . "product SET price = '" . (float)$data['price'] . "' WHERE product_id = '" . (int)$product_id . "'");
+								}
+								break;
+							} 
+						}
+					}
+				}
+
+			]]></add>
+		</operation>
+
+		<operation>
+			<search position="before" index="2"><![CDATA[$this->db->query("DELETE FROM " . DB_PREFIX . "product_related WHERE product_id = '" . (int)$product_id . "'");]]></search>
+			<add><![CDATA[
+				$this->db->query("DELETE FROM " . DB_PREFIX . "product_price WHERE product_id = '" . (int)$product_id . "'");
+			]]></add>
+		</operation>
+
+		<operation>
+			<search position="before"><![CDATA[public function getProductTags($product_id) {]]></search>
+			<add><![CDATA[
+				public function getProductPrice($product_id, $currency_id) {
+					$result = '';
+					$query = $this->db->query("SELECT * FROM " . DB_PREFIX . "product_price WHERE product_id = '" . (int)$product_id . "' AND currency_id = '" . (int)$currency_id . "'");
+					if (!empty($query->row['price'])) {
+						$result = $query->row['price'];
+					}
+
+					return $result;
+				}
+			]]></add>
+		</operation>	
+	</file>
+
+	<file name="admin/model/localisation/currency.php">
+		<operation>
+			<search position="after" offset="2"><![CDATA[public function addCurrency($data) {]]></search>
+			<add><![CDATA[
+				$currency_id = $this->db->getLastId();
+				$this->db->query("DELETE FROM " . DB_PREFIX . "currency_order WHERE currency_id = '" . (int)$currency_id . "'");
+				$this->db->query("INSERT INTO " . DB_PREFIX . "currency_order SET currency_id = '" . (int)$currency_id . "', title = '" . $this->db->escape($data['title']) . "'");
+			]]></add>
+		</operation>
+
+		<operation>
+			<search position="after" offset="2"><![CDATA[public function editCurrency($currency_id, $data) {]]></search>
+			<add><![CDATA[
+				$query = $this->db->query("SELECT product_id, price FROM " . DB_PREFIX . "product_price WHERE price > 0 AND currency_id = '" . (int)$currency_id . "'");
+				
+				foreach ($query->rows as $product){
+					$price = (float)$product['price'] ;
+					//$this->db->query("UPDATE " . DB_PREFIX . "product SET price = '" . (float)$price . "' WHERE product_id = '" . (int)$product['product_id'] . "'");
+				}
+				
+				$this->cache->delete('product');
+			]]></add>
+		</operation>
+
+		<operation>
+			<search position="after" offset="2"><![CDATA[public function deleteCurrency($currency_id) {]]></search>
+			<add><![CDATA[
+				$this->db->query("DELETE FROM " . DB_PREFIX . "currency_order WHERE currency_id = '" . (int)$currency_id . "'");
+				$this->db->query("DELETE FROM " . DB_PREFIX . "product_price WHERE currency_id = '" . (int)$currency_id . "'");
+			]]></add>
+		</operation>
+
+		<operation>
+			<search position="before" index="4"><![CDATA[$this->cache->delete('currency');]]></search>
+			<add><![CDATA[
+				$query = $this->db->query("SELECT pp.product_id, pp.price, c.currency_id, c.value, co.sort_order FROM " . DB_PREFIX . "product_price pp INNER JOIN " . DB_PREFIX . "currency c ON pp.currency_id = c.currency_id INNER JOIN " . DB_PREFIX . "currency_order co ON c.currency_id = co.currency_id WHERE pp.price > 0 ORDER BY co.sort_order DESC, c.currency_id DESC");
+
+				foreach ($query->rows as $product) {
+					$price = (float)$product['price'] ;
+					//$this->db->query("UPDATE " . DB_PREFIX . "product SET price = '" . (float)$price . "' WHERE product_id = '" . (int)$product['product_id'] . "'");
+				}
+
+				$this->cache->delete('product');
+			]]></add>
+		</operation>
+
+	</file>
+
+	<file name="admin/language/russian/catalog/product.php">
+		<operation>
+			<search position="after"><![CDATA[$_['entry_price']            = 'Цена:';]]></search>
+			<add><![CDATA[$_['entry_prices']            = 'Цена';]]></add>
+		</operation>	
+	</file>
+
+	<file name="admin/language/english/catalog/product.php">
+		<operation>
+			<search position="after"><![CDATA[$_['entry_price']            = 'Price:';]]></search>
+			<add><![CDATA[$_['entry_prices']            = 'Price';]]></add>
+		</operation>	
+	</file>
+
+	<file name="admin/view/template/catalog/product_form.tpl">
+		<operation>
+			<search position="after" offset="2"><![CDATA[<td><?php echo $entry_price; ?></td>]]></search>
+			<add><![CDATA[
+				<?php foreach ($product_prices as $product_price) { ?>
+				<tr>
+					<td><?php echo $entry_prices; ?> (<?php echo $product_price['title'] ?>):</td>
+					<td><input type="text" name="prices[<?php echo $product_price['currency_id'] ?>]" value="<?php echo $product_price['price']; ?>" /></td>
+				</tr>
+				<?php } ?>
+			]]></add>
+		</operation>	
+	</file>
+        
+        <file name="catalog/model/catalog/product.php">
+		<operation>
+			<search position="before"><![CDATA[if ($query->num_rows) {]]>
+                        </search>
+			<add><![CDATA[$shop_id = $this->config->get('config_store_id');]]></add>
+		</operation>
+                <operation>
+		<search position="before"><![CDATA[$query->row['price'] = ($query->row['discount'] ? $query->row['discount'] : $query->row['price']);]]></search>
+			<add><![CDATA[
+                        
+                    if($shop_id){
+                        $tax_ids = array();
+                        $exchanges = array();
+                        $tax_ids[1] = 13;
+                        $exchanges[1] = 'GBP';
+                        $tax_ids[2] = 14;   
+                        $exchanges[2] = 'USD';
+                        $multiprice = $this->db->query("SELECT price FROM ".DB_PREFIX."product_price where product_id= $product_id AND currency_id= $shop_id");
+                        if($multiprice->row['price']>0){
+                            $query->row['price'] = $multiprice->row['price'];
+                        }else{
+                             $convert = $this->db->query("SELECT value FROM ".DB_PREFIX."currency where code= '".$exchanges[$shop_id]."'");
+                             $query->row['price'] = $query->row['price']*$convert->row['value'];
+                        }
+                        $query->row['tax_class_id'] = $tax_ids[$shop_id];
+                       }else{]]></add>
+        	</operation>
+                <operation>
+		<search position="after"><![CDATA[$query->row['price'] = ($query->row['discount'] ? $query->row['discount'] : $query->row['price']);]]></search>
+			<add><![CDATA[}]]></add>
+        	</operation>
+  		 	
+	</file>
+        <file name="system/library/cart.php">
+		<operation>
+			<search position="before"><![CDATA[$price = $product_query->row['price'];]]>
+                        </search>
+			<add><![CDATA[
+                        $shop_id = $this->config->get('config_store_id');
+                                        if($shop_id){
+                                            $tax_ids = array();
+                                            $exchanges = array();
+                                            $tax_ids[1] = 13;
+                                            $exchanges[1] = 'GBP';
+                                            $tax_ids[2] = 14;   
+                                            $exchanges[2] = 'USD';
+                                            $multiprice = $this->db->query("SELECT price FROM ".DB_PREFIX."product_price where product_id= ".$product_query->row['product_id']." AND currency_id= $shop_id");
+                                            if($multiprice->row['price']>0){
+                                               $product_query->row['price'] = $multiprice->row['price'];
+                                            }else{
+                                                $convert = $this->db->query("SELECT value FROM ".DB_PREFIX."currency where code= '".$exchanges[$shop_id]."'");
+                                                $product_query->row['price'] = $product_query->row['price']*$convert->row['value'];
+                                            }
+                                            $product_query->row['tax_class_id'] = $tax_ids[$shop_id];
+                                        }
+                        ]]></add>
+        	</operation>
+                
+	</file>
+        
+         <file name="system/library/currency.php">
+		<operation>
+			<search position="before"><![CDATA[$string = '';]]>
+                        </search>
+			<add><![CDATA[
+                        $value = $number;
+                        ]]></add>
+        	</operation>
+                
+	</file>
+        
+
+
+
+</modification>
