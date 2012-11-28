@@ -134,7 +134,7 @@
 		</operation>
 
 		<operation>
-			<search position="before"><![CDATA[public function getProductTags($product_id) {]]></search>
+			<search position="before"><![CDATA[public function addProduct($data) {]]></search>
 			<add><![CDATA[
 				public function getProductPrice($product_id, $currency_id) {
 					$result = '';
